@@ -57,11 +57,20 @@ class NusBleManager(context: Context) : BleManager(context) {
         }
     }
 
-    fun send(data: ByteArray) {
-        nusRx?.let {
-            writeCharacteristic(it, data)
+    fun send(data: ByteArray, log: ((String) -> Unit)? = null) {
+        nusRx?.let { characteristic ->
+            val props = characteristic.properties
+            val canWrite = (props and BluetoothGattCharacteristic.PROPERTY_WRITE) != 0
+            val canWriteNoResp = (props and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+            if (!canWrite && !canWriteNoResp) {
+                log?.invoke("NUS RX characteristic does not support write operations!")
+                return
+            }
+            writeCharacteristic(characteristic, data)
                 .split()
+                .done { log?.invoke("Write to NUS RX successful.") }
+                .fail { device, status -> log?.invoke("Write to NUS RX failed: $status") }
                 .enqueue()
-        }
+        } ?: log?.invoke("NUS RX characteristic not found!")
     }
 }
