@@ -1,16 +1,15 @@
 package com.example.talungcommandsender
 
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import no.nordicsemi.android.ble.BleManager
-import no.nordicsemi.android.ble.BleManagerCallbacks
-import no.nordicsemi.android.ble.data.Data
 import no.nordicsemi.android.ble.callback.DataReceivedCallback
-import no.nordicsemi.android.ble.callback.DataSentCallback
-import android.bluetooth.BluetoothGattCharacteristic
+import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
 
-class NusBleManager(context: Context) : BleManager<NusBleManagerCallbacks>(context) {
+class NusBleManager(context: Context) : BleManager(context) {
     companion object {
         val NUS_SERVICE_UUID: UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
         val NUS_RX_UUID: UUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
@@ -19,27 +18,32 @@ class NusBleManager(context: Context) : BleManager<NusBleManagerCallbacks>(conte
 
     private var nusRx: BluetoothGattCharacteristic? = null
     private var nusTx: BluetoothGattCharacteristic? = null
+    private var onDataReceived: ((BluetoothDevice, Data) -> Unit)? = null
 
-    override fun getGattCallback(): BleManagerGattCallback {
-        return object : BleManagerGattCallback() {
-            override fun isRequiredServiceSupported(gatt: android.bluetooth.BluetoothGatt): Boolean {
-                val service = gatt.getService(NUS_SERVICE_UUID)
-                nusRx = service?.getCharacteristic(NUS_RX_UUID)
-                nusTx = service?.getCharacteristic(NUS_TX_UUID)
-                return nusRx != null && nusTx != null
-            }
+    fun setOnDataReceivedListener(listener: (BluetoothDevice, Data) -> Unit) {
+        onDataReceived = listener
+    }
 
-            override fun initialize() {
-                setNotificationCallback(nusTx).with { device, data ->
-                    callbacks?.onDataReceived(device, data)
-                }
-                enableNotifications(nusTx).enqueue()
-            }
+    override fun getGattCallback(): BleManagerGattCallback = NusBleManagerGattCallback()
 
-            override fun onServicesInvalidated() {
-                nusRx = null
-                nusTx = null
-            }
+    private inner class NusBleManagerGattCallback : BleManagerGattCallback() {
+        override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
+            val service = gatt.getService(NUS_SERVICE_UUID)
+            nusRx = service?.getCharacteristic(NUS_RX_UUID)
+            nusTx = service?.getCharacteristic(NUS_TX_UUID)
+            return nusRx != null && nusTx != null
+        }
+
+        override fun initialize() {
+            setNotificationCallback(nusTx).with(DataReceivedCallback { device, data ->
+                onDataReceived?.invoke(device, data)
+            })
+            enableNotifications(nusTx).enqueue()
+        }
+
+        override fun onServicesInvalidated() {
+            nusRx = null
+            nusTx = null
         }
     }
 
@@ -50,8 +54,4 @@ class NusBleManager(context: Context) : BleManager<NusBleManagerCallbacks>(conte
                 .enqueue()
         }
     }
-}
-
-interface NusBleManagerCallbacks : BleManagerCallbacks {
-    fun onDataReceived(device: BluetoothDevice, data: Data)
 }
