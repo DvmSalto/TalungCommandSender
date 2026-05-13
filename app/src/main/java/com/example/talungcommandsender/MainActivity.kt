@@ -60,12 +60,42 @@ class MainActivity : Activity() {
         val commandEditText = findViewById<android.widget.EditText>(R.id.commandEditText)
         val dataEditText = findViewById<android.widget.EditText>(R.id.dataEditText)
         val sendButton = findViewById<Button>(R.id.sendButton)
+        sendButton.isEnabled = false
+
+        // Add a connect button (optional, or auto-connect to a known device)
+        val connectButton = Button(this)
+        connectButton.text = "Connect BLE"
+        val layout = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(android.R.id.content).rootView as? androidx.constraintlayout.widget.ConstraintLayout
+        layout?.addView(connectButton)
+        connectButton.setOnClickListener {
+            // TODO: Replace with your device name or scan logic
+            val deviceName = "YourDeviceName" // <-- Set your BLE device name here
+            appendLog("Scanning for BLE device: $deviceName")
+            bleNusManager.startScan(deviceName) { device ->
+                appendLog("Device found: ${device.name} (${device.address}) Connecting...")
+                bleNusManager.connect(device, onConnected = {
+                    runOnUiThread {
+                        isConnected = true
+                        sendButton.isEnabled = true
+                        appendLog("Connected to BLE device!")
+                    }
+                }, onDataReceived = { bytes ->
+                    val hex = bytes.joinToString(" ") { String.format("%02X", it) }
+                    runOnUiThread { appendLog("Received: $hex") }
+                })
+            }
+        }
 
         sendButton.setOnClickListener {
             if (!hasPermissions()) {
                 requestPermissions()
                 Toast.makeText(this, "Grant permissions first", Toast.LENGTH_SHORT).show()
                 appendLog("Permission denied or not granted yet.")
+                return@setOnClickListener
+            }
+            if (!isConnected) {
+                Toast.makeText(this, "Not connected to BLE device", Toast.LENGTH_SHORT).show()
+                appendLog("Not connected to BLE device.")
                 return@setOnClickListener
             }
             val commandStr = commandEditText.text.toString().trim()
@@ -89,13 +119,11 @@ class MainActivity : Activity() {
                 appendLog("Invalid data bytes: $dataStr")
                 return@setOnClickListener
             }
-            // For now, status is always 0. You can add a status field if needed.
             val frame = makeDataFrame(commandNum, 0, dataBytes)
             val hexString = frame.joinToString(" ") { String.format("%02X", it) }
             appendLog("Sending: $hexString")
             bleNusManager.send(frame)
             Toast.makeText(this, "Command sent over BLE", Toast.LENGTH_SHORT).show()
-            // The BLE manager's onDataReceived callback will log the response
         }
     }
 
