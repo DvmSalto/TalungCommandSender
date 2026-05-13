@@ -15,6 +15,8 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
 import android.widget.Toast
+import android.widget.TextView
+import android.widget.ScrollView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.bluetooth.BluetoothDevice
@@ -22,6 +24,17 @@ import com.example.talungcommandsender.BleNusManager
 import com.example.talungcommandsender.DataFrame
 
 class MainActivity : Activity() {
+        private lateinit var logTextView: TextView
+        private lateinit var logScrollView: ScrollView
+        private val logBuffer = StringBuilder()
+
+        private fun appendLog(message: String) {
+            logBuffer.append("\n").append(message)
+            if (::logTextView.isInitialized) {
+                logTextView.text = logBuffer.toString()
+                logScrollView.post { logScrollView.fullScroll(ScrollView.FOCUS_DOWN) }
+            }
+        }
     private val PERMISSION_REQUEST_CODE = 1001
     private var nfcAdapter: NfcAdapter? = null
     private lateinit var bleNusManager: BleNusManager
@@ -33,6 +46,9 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         bleNusManager = BleNusManager(this)
+        logTextView = findViewById(R.id.logTextView)
+        logScrollView = findViewById(R.id.logScrollView)
+        appendLog("App started. Waiting for user action...")
 
         // Request BLE and location permissions if needed
         if (!hasPermissions()) {
@@ -49,32 +65,39 @@ class MainActivity : Activity() {
 
         commandListView.setOnItemClickListener { _, _, position, _ ->
             selectedCommand = commands[position]
+            appendLog("Selected command: ${commands[position]}")
         }
 
         sendButton.setOnClickListener {
             if (!hasPermissions()) {
                 requestPermissions()
                 Toast.makeText(this, "Grant permissions first", Toast.LENGTH_SHORT).show()
+                appendLog("Permission denied or not granted yet.")
                 return@setOnClickListener
             }
             if (selectedCommand != null) {
                 if (!isConnected) {
+                    appendLog("Scanning for BLE device...")
                     bleNusManager.startScan("NUS_Device") { device ->
                         connectedDevice = device
+                        appendLog("BLE device found: ${device.name ?: device.address}")
                         bleNusManager.connect(device, {
                             isConnected = true
                             Toast.makeText(this, "Connected to BLE device", Toast.LENGTH_SHORT).show()
+                            appendLog("Connected to BLE device: ${device.name ?: device.address}")
                             sendSelectedCommand(selectedCommand!!)
                         }, { data ->
-                            Toast.makeText(this, "Received: ${data.joinToString()}", Toast.LENGTH_SHORT).show()
+                            val msg = "Received: ${data.joinToString()}"
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                            appendLog(msg)
                         })
                     }
-                    Toast.makeText(this, "Scanning for BLE device...", Toast.LENGTH_SHORT).show()
                 } else {
                     sendSelectedCommand(selectedCommand!!)
                 }
             } else {
                 Toast.makeText(this, "Select a command first", Toast.LENGTH_SHORT).show()
+                appendLog("No command selected.")
             }
         }
     }
@@ -177,7 +200,9 @@ class MainActivity : Activity() {
         val frame = DataFrame(commandByte, payload)
         val frameBytes = DataFrame.toBytes(frame)
         bleNusManager.send(frameBytes)
+        val logMsg = "Command sent over BLE: $command (0x%02X)".format(commandByte)
         Toast.makeText(this, "Command sent over BLE", Toast.LENGTH_SHORT).show()
+        appendLog(logMsg)
     }
 
     override fun onResume() {
@@ -202,6 +227,7 @@ class MainActivity : Activity() {
             val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 Toast.makeText(this, "NFC Tag detected!", Toast.LENGTH_SHORT).show()
+                appendLog("NFC Tag detected! Tag: $tag")
                 // TODO: Parse OOB data from tag and extract BLE pairing info
                 // TODO: Use extracted info to connect to BLE device securely
                 // For now, BLE scan is triggered by button, not NFC
