@@ -10,6 +10,9 @@ import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
 
 class NusBleManager(context: Context) : BleManager(context) {
+    private var lastBluetoothGatt: BluetoothGatt? = null
+    val bluetoothGatt: BluetoothGatt?
+        get() = lastBluetoothGatt
 
         fun logAllServices(gatt: BluetoothGatt, log: (String) -> Unit) {
             log("Discovered GATT Services:")
@@ -38,6 +41,7 @@ class NusBleManager(context: Context) : BleManager(context) {
 
     private inner class NusBleManagerGattCallback : BleManagerGattCallback() {
         override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
+            lastBluetoothGatt = gatt
             val service = gatt.getService(NUS_SERVICE_UUID)
             nusRx = service?.getCharacteristic(NUS_RX_UUID)
             nusTx = service?.getCharacteristic(NUS_TX_UUID)
@@ -54,6 +58,7 @@ class NusBleManager(context: Context) : BleManager(context) {
         override fun onServicesInvalidated() {
             nusRx = null
             nusTx = null
+            lastBluetoothGatt = null
         }
     }
 
