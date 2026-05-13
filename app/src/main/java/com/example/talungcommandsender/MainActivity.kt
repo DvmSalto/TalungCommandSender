@@ -65,8 +65,9 @@ class MainActivity : Activity() {
         val sendButton = findViewById<Button>(R.id.sendButton)
         sendButton.isEnabled = true
 
-        // Auto-connect to paired OOB device using Android-BLE-Library
-        // Removed restriction: No paired device name required. User can now use send button regardless of device discovery.
+        // Optionally, after connecting, log all GATT services of the connected device
+        // This requires a connection and access to the BluetoothGatt object
+        // You can call this after a successful connection if you have access to the gatt object
 
         sendButton.setOnClickListener {
             if (!hasPermissions()) {
