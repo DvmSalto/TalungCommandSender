@@ -24,7 +24,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.bluetooth.BluetoothDevice
 import com.example.talungcommandsender.BleNusManager
-import com.example.talungcommandsender.DataFrame
+
 
 class MainActivity : Activity() {
         private lateinit var logTextView: TextView
@@ -181,9 +181,7 @@ class MainActivity : Activity() {
     }
 
     private fun sendChameleonCommand(command: Int, payload: ByteArray) {
-        val commandByte = (command and 0xFF).toByte()
-        val frame = DataFrame(commandByte, payload)
-        val frameBytes = DataFrame.toBytes(frame)
+        val frameBytes = makeChameleonFrame(command, 0, payload)
         val hexString = frameBytes.joinToString(" ") { String.format("%02X", it) }
         appendLog("Sending: $hexString")
         bleNusManager.send(frameBytes)
