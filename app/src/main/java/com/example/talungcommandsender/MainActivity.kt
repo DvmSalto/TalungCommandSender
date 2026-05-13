@@ -9,6 +9,9 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.NdefMessage
+import android.nfc.NdefRecord
+import android.nfc.tech.Ndef
 import android.os.Build
 import android.os.Bundle
 import android.widget.ArrayAdapter
@@ -228,10 +231,78 @@ class MainActivity : Activity() {
             if (tag != null) {
                 Toast.makeText(this, "NFC Tag detected!", Toast.LENGTH_SHORT).show()
                 appendLog("NFC Tag detected! Tag: $tag")
-                // TODO: Parse OOB data from tag and extract BLE pairing info
-                // TODO: Use extracted info to connect to BLE device securely
-                // For now, BLE scan is triggered by button, not NFC
+                // Try to read NDEF records
+                val ndef = Ndef.get(tag)
+                if (ndef != null) {
+                    try {
+                        ndef.connect()
+                        val ndefMessage: NdefMessage? = ndef.ndefMessage
+                        if (ndefMessage != null) {
+                            for (record in ndefMessage.records) {
+                                val payload = record.payload
+                                // Try to extract MAC address from text or bytes
+                                val mac = extractMacFromPayload(payload)
+                                if (mac != null) {
+                                    appendLog("Extracted BLE MAC from NFC: $mac")
+                                    connectToBleDevice(mac)
+                                    ndef.close()
+                                    return
+                                }
+                            }
+                            appendLog("No valid BLE MAC found in NFC tag payload.")
+                        } else {
+                            appendLog("No NDEF message found on NFC tag.")
+                        }
+                        ndef.close()
+                    } catch (e: Exception) {
+                        appendLog("Error reading NFC tag: ${e.message}")
+                    }
+                } else {
+                    appendLog("NFC tag is not NDEF formatted.")
+                }
             }
         }
+    }
+
+    // Helper: Try to extract MAC address from NFC payload (text or bytes)
+    private fun extractMacFromPayload(payload: ByteArray): String? {
+        // Try to parse as text (skip language code if present)
+        return try {
+            val text = if (payload.size > 1 && payload[0].toInt() < payload.size) {
+                String(payload.copyOfRange(1 + payload[0], payload.size), Charsets.UTF_8)
+            } else {
+                String(payload, Charsets.UTF_8)
+            }
+            val macRegex = Regex("([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}")
+            macRegex.find(text)?.value
+                ?: payloadToMac(payload)
+        } catch (e: Exception) {
+            payloadToMac(payload)
+        }
+    }
+
+    // Helper: Try to parse MAC from raw bytes
+    private fun payloadToMac(payload: ByteArray): String? {
+        if (payload.size >= 6) {
+            val mac = payload.takeLast(6).joinToString(":") { String.format("%02X", it) }
+            if (mac.matches(Regex("([0-9A-F]{2}:){5}[0-9A-F]{2}"))) return mac
+        }
+        return null
+    }
+
+    // Helper: Connect to BLE device by MAC address
+    private fun connectToBleDevice(mac: String) {
+        appendLog("Attempting BLE connection to $mac from NFC tag...")
+        val device = (getSystemService(BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager)
+            .adapter.getRemoteDevice(mac)
+        bleNusManager.connect(device, {
+            isConnected = true
+            Toast.makeText(this, "Connected to BLE device (NFC)", Toast.LENGTH_SHORT).show()
+            appendLog("Connected to BLE device (NFC): $mac")
+        }, { data ->
+            val msg = "Received: ${data.joinToString()}"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            appendLog(msg)
+        })
     }
 }
