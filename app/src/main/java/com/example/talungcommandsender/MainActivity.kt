@@ -63,36 +63,10 @@ class MainActivity : Activity() {
         val commandEditText = findViewById<android.widget.EditText>(R.id.commandEditText)
         val dataEditText = findViewById<android.widget.EditText>(R.id.dataEditText)
         val sendButton = findViewById<Button>(R.id.sendButton)
-        sendButton.isEnabled = false
+        sendButton.isEnabled = true
 
         // Auto-connect to paired OOB device using Android-BLE-Library
-        val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-        val targetDeviceName = "YourDeviceName" // <-- Set your OOB device name here
-        val bondedDevices = bluetoothAdapter?.bondedDevices
-        val device = bondedDevices?.firstOrNull { it.name == targetDeviceName }
-        if (device != null) {
-            appendLog("Found paired device: ${device.name} (${device.address}), connecting...")
-            nusBleManager.setOnDataReceivedListener { device, data ->
-                val hex = data.value?.joinToString(" ") { String.format("%02X", it) } ?: ""
-                runOnUiThread { appendLog("Received: $hex") }
-            }
-            nusBleManager.connect(device)
-                .retry(3, 100)
-                .useAutoConnect(false)
-                .done {
-                    runOnUiThread {
-                        isConnected = true
-                        sendButton.isEnabled = true
-                        appendLog("Connected to BLE device!")
-                    }
-                }
-                .fail { _, status ->
-                    runOnUiThread { appendLog("BLE connection failed: $status") }
-                }
-                .enqueue()
-        } else {
-            appendLog("No paired device found with name: $targetDeviceName")
-        }
+        // Removed restriction: No paired device name required. User can now use send button regardless of device discovery.
 
         sendButton.setOnClickListener {
             if (!hasPermissions()) {
