@@ -226,41 +226,45 @@ class MainActivity : Activity() {
     // Handles NFC tag discovery for OOB BLE pairing
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == NfcAdapter.ACTION_TAG_DISCOVERED) {
-            val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
-            if (tag != null) {
-                Toast.makeText(this, "NFC Tag detected!", Toast.LENGTH_SHORT).show()
-                appendLog("NFC Tag detected! Tag: $tag")
-                // Try to read NDEF records
-                val ndef = Ndef.get(tag)
-                if (ndef != null) {
-                    try {
-                        ndef.connect()
-                        val ndefMessage: NdefMessage? = ndef.ndefMessage
-                        if (ndefMessage != null) {
-                            for (record in ndefMessage.records) {
-                                val payload = record.payload
-                                // Try to extract MAC address from text or bytes
-                                val mac = extractMacFromPayload(payload)
-                                if (mac != null) {
-                                    appendLog("Extracted BLE MAC from NFC: $mac")
-                                    connectToBleDevice(mac)
-                                    ndef.close()
-                                    return
-                                }
-                            }
-                            appendLog("No valid BLE MAC found in NFC tag payload.")
-                        } else {
-                            appendLog("No NDEF message found on NFC tag.")
-                        }
-                        ndef.close()
-                    } catch (e: Exception) {
-                        appendLog("Error reading NFC tag: ${e.message}")
+        val action = intent.action
+        appendLog("NFC intent received: $action")
+        if (action == NfcAdapter.ACTION_TAG_DISCOVERED || action == NfcAdapter.ACTION_NDEF_DISCOVERED) {
+            try {
+                val ndefMessage: NdefMessage? = when {
+                    intent.hasExtra(NfcAdapter.EXTRA_NDEF_MESSAGES) -> {
+                        val rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
+                        if (rawMsgs != null && rawMsgs.isNotEmpty()) rawMsgs[0] as? NdefMessage else null
                     }
-                } else {
-                    appendLog("NFC tag is not NDEF formatted.")
+                    else -> {
+                        val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
+                        if (tag != null) {
+                            val ndef = Ndef.get(tag)
+                            ndef?.connect()
+                            val msg = ndef?.ndefMessage
+                            ndef?.close()
+                            msg
+                        } else null
+                    }
                 }
+                if (ndefMessage != null) {
+                    for (record in ndefMessage.records) {
+                        val payload = record.payload
+                        val mac = extractMacFromPayload(payload)
+                        if (mac != null) {
+                            appendLog("Extracted BLE MAC from NFC: $mac")
+                            connectToBleDevice(mac)
+                            return
+                        }
+                    }
+                    appendLog("No valid BLE MAC found in NFC tag payload.")
+                } else {
+                    appendLog("No NDEF message found on NFC tag.")
+                }
+            } catch (e: Exception) {
+                appendLog("Error handling NFC intent: ${e.message}")
             }
+        } else {
+            appendLog("NFC intent not handled: $action")
         }
     }
 
