@@ -108,7 +108,29 @@ class MainActivity : Activity() {
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
             permissions.add(Manifest.permission.BLUETOOTH_SCAN)
         }
-        ActivityCompat.requestPermissions(this, permissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+        val permissionsToRequest = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (permissionsToRequest.isEmpty()) return
+
+        var shouldShowRationale = false
+        permissionsToRequest.forEach {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, it)) {
+                shouldShowRationale = true
+            }
+        }
+        if (shouldShowRationale) {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Permission required")
+                .setMessage("Bluetooth and location permissions are required for BLE communication. Please grant them.")
+                .setPositiveButton("OK") { _, _ ->
+                    ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), PERMISSION_REQUEST_CODE)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), PERMISSION_REQUEST_CODE)
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -117,7 +139,28 @@ class MainActivity : Activity() {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 Toast.makeText(this, "Permissions granted", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "Permissions denied", Toast.LENGTH_SHORT).show()
+                // Check if any permission is permanently denied
+                var permanentlyDenied = false
+                permissions.forEachIndexed { index, perm ->
+                    if (grantResults[index] != PackageManager.PERMISSION_GRANTED &&
+                        !ActivityCompat.shouldShowRequestPermissionRationale(this, perm)) {
+                        permanentlyDenied = true
+                    }
+                }
+                if (permanentlyDenied) {
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("Permission denied")
+                        .setMessage("Some permissions are permanently denied. Please enable them in app settings.")
+                        .setPositiveButton("Settings") { _, _ ->
+                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            intent.data = android.net.Uri.fromParts("package", packageName, null)
+                            startActivity(intent)
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    Toast.makeText(this, "Permissions denied", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
