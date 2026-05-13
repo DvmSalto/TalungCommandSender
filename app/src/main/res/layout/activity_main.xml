@@ -7,16 +7,36 @@
     tools:context=".MainActivity">
 
 
-    <ListView
-        android:id="@+id/commandListView"
+
+    <EditText
+        android:id="@+id/commandEditText"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Command (decimal, e.g. 1001)"
+        android:inputType="number"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/sendButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"
-        app:layout_constraintHeight_percent="0.3" />
+        android:layout_marginTop="16dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" />
+
+    <EditText
+        android:id="@+id/dataEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Data bytes (hex, e.g. 24 03 a4 ff f5)"
+        android:inputType="text"
+        app:layout_constraintTop_toBottomOf="@+id/commandEditText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" />
 
 
 
@@ -25,7 +45,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Send Command"
-        app:layout_constraintTop_toBottomOf="@+id/commandListView"
+        app:layout_constraintTop_toBottomOf="@+id/dataEditText"
         app:layout_constraintBottom_toTopOf="@+id/logScrollView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

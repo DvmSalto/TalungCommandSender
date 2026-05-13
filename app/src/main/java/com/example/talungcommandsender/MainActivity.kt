@@ -57,19 +57,9 @@ class MainActivity : Activity() {
         if (!hasPermissions()) {
             requestPermissions()
         }
-        val commands = listOf("Command 1", "Command 2", "Command 3")
-        val commandListView = findViewById<ListView>(R.id.commandListView)
+        val commandEditText = findViewById<android.widget.EditText>(R.id.commandEditText)
+        val dataEditText = findViewById<android.widget.EditText>(R.id.dataEditText)
         val sendButton = findViewById<Button>(R.id.sendButton)
-        var selectedCommand: String? = null
-
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_single_choice, commands)
-        commandListView.adapter = adapter
-        commandListView.choiceMode = ListView.CHOICE_MODE_SINGLE
-
-        commandListView.setOnItemClickListener { _, _, position, _ ->
-            selectedCommand = commands[position]
-            appendLog("Selected command: ${commands[position]}")
-        }
 
         sendButton.setOnClickListener {
             if (!hasPermissions()) {
@@ -78,30 +68,28 @@ class MainActivity : Activity() {
                 appendLog("Permission denied or not granted yet.")
                 return@setOnClickListener
             }
-            if (selectedCommand != null) {
-                if (!isConnected) {
-                    appendLog("Scanning for BLE device...")
-                    bleNusManager.startScan("NUS_Device") { device ->
-                        connectedDevice = device
-                        appendLog("BLE device found: ${device.name ?: device.address}")
-                        bleNusManager.connect(device, {
-                            isConnected = true
-                            Toast.makeText(this, "Connected to BLE device", Toast.LENGTH_SHORT).show()
-                            appendLog("Connected to BLE device: ${device.name ?: device.address}")
-                            sendSelectedCommand(selectedCommand!!)
-                        }, { data ->
-                            val msg = "Received: ${data.joinToString()}"
-                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                            appendLog(msg)
-                        })
-                    }
-                } else {
-                    sendSelectedCommand(selectedCommand!!)
-                }
-            } else {
-                Toast.makeText(this, "Select a command first", Toast.LENGTH_SHORT).show()
-                appendLog("No command selected.")
+            val commandStr = commandEditText.text.toString().trim()
+            val dataStr = dataEditText.text.toString().trim()
+            if (commandStr.isEmpty()) {
+                Toast.makeText(this, "Enter a command number", Toast.LENGTH_SHORT).show()
+                appendLog("No command entered.")
+                return@setOnClickListener
             }
+            val commandNum = try { commandStr.toInt() } catch (e: Exception) {
+                Toast.makeText(this, "Invalid command number", Toast.LENGTH_SHORT).show()
+                appendLog("Invalid command number: $commandStr")
+                return@setOnClickListener
+            }
+            val dataBytes = if (dataStr.isEmpty()) byteArrayOf() else try {
+                dataStr.split(" ", ",", ";", "\t", "\n").filter { it.isNotBlank() }
+                    .map { it.trim().removePrefix("0x").toInt(16).toByte() }
+                    .toByteArray()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Invalid data bytes", Toast.LENGTH_SHORT).show()
+                appendLog("Invalid data bytes: $dataStr")
+                return@setOnClickListener
+            }
+            sendChameleonCommand(commandNum, dataBytes)
         }
     }
 
@@ -186,21 +174,15 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun sendSelectedCommand(command: String) {
-        // Example: map command string to byte and payload
-        val commandByte: Byte = when (command) {
-            "Command 1" -> 0x01
-            "Command 2" -> 0x02
-            "Command 3" -> 0x03
-            else -> 0x00
-        }
-        val payload = byteArrayOf() // Add payload if needed
+    private fun sendChameleonCommand(command: Int, payload: ByteArray) {
+        val commandByte = (command and 0xFF).toByte()
         val frame = DataFrame(commandByte, payload)
         val frameBytes = DataFrame.toBytes(frame)
+        val hexString = frameBytes.joinToString(" ") { String.format("%02X", it) }
+        appendLog("Sending: $hexString")
         bleNusManager.send(frameBytes)
-        val logMsg = "Command sent over BLE: $command (0x%02X)".format(commandByte)
         Toast.makeText(this, "Command sent over BLE", Toast.LENGTH_SHORT).show()
-        appendLog(logMsg)
+        // The BLE manager's onDataReceived callback will log the response
     }
 
 }
