@@ -23,7 +23,9 @@ import android.widget.ScrollView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.bluetooth.BluetoothDevice
-import com.example.talungcommandsender.BleNusManager
+import com.example.talungcommandsender.NusBleManager
+import com.example.talungcommandsender.NusBleManagerCallbacks
+import no.nordicsemi.android.ble.data.Data
 
 
 class MainActivity : Activity() {
@@ -40,7 +42,7 @@ class MainActivity : Activity() {
         }
     private val PERMISSION_REQUEST_CODE = 1001
     private var nfcAdapter: NfcAdapter? = null
-    private lateinit var bleNusManager: BleNusManager
+    private lateinit var nusBleManager: NusBleManager
     private var connectedDevice: BluetoothDevice? = null
     private var isConnected = false
 
@@ -49,7 +51,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
-        bleNusManager = BleNusManager(this)
+        nusBleManager = NusBleManager(this)
         logTextView = findViewById(R.id.logTextView)
         logScrollView = findViewById(R.id.logScrollView)
         appendLog("App started. Waiting for user action...")
@@ -63,23 +65,51 @@ class MainActivity : Activity() {
         val sendButton = findViewById<Button>(R.id.sendButton)
         sendButton.isEnabled = false
 
-        // Auto-connect to paired OOB device
+        // Auto-connect to paired OOB device using Android-BLE-Library
         val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
         val targetDeviceName = "YourDeviceName" // <-- Set your OOB device name here
         val bondedDevices = bluetoothAdapter?.bondedDevices
         val device = bondedDevices?.firstOrNull { it.name == targetDeviceName }
         if (device != null) {
             appendLog("Found paired device: ${device.name} (${device.address}), connecting...")
-            bleNusManager.connect(device, onConnected = {
-                runOnUiThread {
-                    isConnected = true
-                    sendButton.isEnabled = true
-                    appendLog("Connected to BLE device!")
+            nusBleManager.setGattCallbacks(object : NusBleManagerCallbacks {
+                override fun onDataReceived(device: android.bluetooth.BluetoothDevice, data: Data) {
+                    val hex = data.value?.joinToString(" ") { String.format("%02X", it) } ?: ""
+                    runOnUiThread { appendLog("Received: $hex") }
                 }
-            }, onDataReceived = { bytes ->
-                val hex = bytes.joinToString(" ") { String.format("%02X", it) }
-                runOnUiThread { appendLog("Received: $hex") }
+                override fun onDeviceConnecting(device: android.bluetooth.BluetoothDevice) {}
+                override fun onDeviceConnected(device: android.bluetooth.BluetoothDevice) {
+                    runOnUiThread {
+                        isConnected = true
+                        sendButton.isEnabled = true
+                        appendLog("Connected to BLE device!")
+                    }
+                }
+                override fun onDeviceDisconnecting(device: android.bluetooth.BluetoothDevice) {}
+                override fun onDeviceDisconnected(device: android.bluetooth.BluetoothDevice) {
+                    runOnUiThread {
+                        isConnected = false
+                        sendButton.isEnabled = false
+                        appendLog("Disconnected from BLE device!")
+                    }
+                }
+                override fun onLinkLossOccurred(device: android.bluetooth.BluetoothDevice) {}
+                override fun onError(device: android.bluetooth.BluetoothDevice, message: String, errorCode: Int) {
+                    runOnUiThread { appendLog("BLE Error: $message ($errorCode)") }
+                }
+                override fun onDeviceReady(device: android.bluetooth.BluetoothDevice) {}
+                override fun onBondingRequired(device: android.bluetooth.BluetoothDevice) {}
+                override fun onBonded(device: android.bluetooth.BluetoothDevice) {}
+                override fun onBondingFailed(device: android.bluetooth.BluetoothDevice) {}
+                override fun onBatteryValueReceived(device: android.bluetooth.BluetoothDevice, value: Int) {}
+                override fun onDeviceNotSupported(device: android.bluetooth.BluetoothDevice) {
+                    runOnUiThread { appendLog("Device not supported!") }
+                }
             })
+            nusBleManager.connect(device)
+                .retry(3, 100)
+                .useAutoConnect(false)
+                .enqueue()
         } else {
             appendLog("No paired device found with name: $targetDeviceName")
         }
@@ -120,7 +150,7 @@ class MainActivity : Activity() {
             val frame = makeDataFrame(commandNum, 0, dataBytes)
             val hexString = frame.joinToString(" ") { String.format("%02X", it) }
             appendLog("Sending: $hexString")
-            bleNusManager.send(frame)
+            nusBleManager.send(frame)
             Toast.makeText(this, "Command sent over BLE", Toast.LENGTH_SHORT).show()
         }
     }
