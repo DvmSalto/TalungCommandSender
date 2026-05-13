@@ -62,11 +62,7 @@ class MainActivity : Activity() {
         val sendButton = findViewById<Button>(R.id.sendButton)
         sendButton.isEnabled = false
 
-        // Add a connect button (optional, or auto-connect to a known device)
-        val connectButton = Button(this)
-        connectButton.text = "Connect BLE"
-        val layout = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(android.R.id.content).rootView as? androidx.constraintlayout.widget.ConstraintLayout
-        layout?.addView(connectButton)
+        val connectButton = findViewById<Button>(R.id.connectButton)
         connectButton.setOnClickListener {
             // TODO: Replace with your device name or scan logic
             val deviceName = "YourDeviceName" // <-- Set your BLE device name here
