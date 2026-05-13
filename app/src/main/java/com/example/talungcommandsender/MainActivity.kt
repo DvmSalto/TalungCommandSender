@@ -75,11 +75,6 @@ class MainActivity : Activity() {
                 appendLog("Permission denied or not granted yet.")
                 return@setOnClickListener
             }
-            if (!isConnected) {
-                Toast.makeText(this, "Not connected to BLE device", Toast.LENGTH_SHORT).show()
-                appendLog("Not connected to BLE device.")
-                return@setOnClickListener
-            }
             val commandStr = commandEditText.text.toString().trim()
             val dataStr = dataEditText.text.toString().trim()
             if (commandStr.isEmpty()) {
