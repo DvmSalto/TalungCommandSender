@@ -7,7 +7,6 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import no.nordicsemi.android.ble.BleManager
-import no.nordicsemi.android.ble.ConnectionPriority
 import no.nordicsemi.android.ble.callback.DataReceivedCallback
 import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
@@ -47,12 +46,12 @@ class NusBleManager(context: Context) : BleManager(context) {
     override fun getGattCallback(): BleManagerGattCallback = NusBleManagerGattCallback()
 
     private inner class NusBleManagerGattCallback : BleManagerGattCallback() {
-                override fun onDeviceReady() {
-                    // Request MTU when device is ready
-                    Log.d(TAG, "onDeviceReady: requesting MTU 247")
-                    requestMtu(247).enqueue()
-                    requestConnectionPriority(ConnectionPriority.HIGH).enqueue()
-                }
+        override fun onDeviceReady() {
+            // Request MTU when device is ready
+            Log.d(TAG, "onDeviceReady: requesting MTU 247")
+            requestMtu(247).enqueue()
+            requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH).enqueue()
+        }
         override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
             Log.d(TAG, "isRequiredServiceSupported: called")
             logAllServices(gatt) { Log.d(TAG, it) }
