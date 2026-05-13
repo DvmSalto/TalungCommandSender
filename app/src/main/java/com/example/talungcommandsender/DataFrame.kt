@@ -46,18 +46,8 @@ fun makeChameleonFrame(cmd: Int, status: Int, data: ByteArray): ByteArray {
     frame[frame.size - 2] = (lrc3 and 0xFF).toByte()
     frame[frame.size - 1] = ((lrc3 shr 8) and 0xFF).toByte()
     return frame
-}
 data class DataFrame(
-package com.example.talungcommandsender
-
-// CRC16 with polynomial 0x9400, initial value 0xFFFF
-fun crc16_9400(data: ByteArray, offset: Int = 0, length: Int = data.size, initial: Int = 0xFFFF): Int {
-    var crc = initial
-    for (i in offset until (offset + length)) {
-        crc = crc xor (data[i].toInt() and 0xFF shl 8)
-        for (j in 0 until 8) {
-            crc = if ((crc and 0x8000) != 0) (crc shl 1) xor 0x9400 else crc shl 1
-        }
+}
         crc = crc and 0xFFFF
     }
     return crc
