@@ -1,5 +1,6 @@
-import android.util.Log
 package com.example.talungcommandsender
+
+import android.util.Log
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -16,7 +17,7 @@ class NusBleManager(context: Context) : BleManager(context) {
     val bluetoothGatt: BluetoothGatt?
         get() = lastBluetoothGatt
 
-        fun logAllServices(gatt: BluetoothGatt, log: (String) -> Unit) {
+    fun logAllServices(gatt: BluetoothGatt, log: (String) -> Unit) {
             log("Discovered GATT Services:")
             Log.d(TAG, "Discovered GATT Services:")
             for (service in gatt.services) {
@@ -27,6 +28,14 @@ class NusBleManager(context: Context) : BleManager(context) {
                     Log.d(TAG, "  Characteristic: ${characteristic.uuid}")
                 }
             }
+                override fun onDeviceReady() {
+                    // Request MTU and Data Length when device is ready
+                    Log.d(TAG, "onDeviceReady: requesting MTU 247 and data length 251")
+                    requestMtu(247).enqueue()
+                    requestConnectionPriority(CONNECTION_PRIORITY_HIGH).enqueue()
+                    // If requestDataLength is not available in your library version, comment out the next line
+                    // requestDataLength(251).enqueue()
+                }
         }
             override fun onDeviceReady() {
                 // Request MTU and Data Length when device is ready
