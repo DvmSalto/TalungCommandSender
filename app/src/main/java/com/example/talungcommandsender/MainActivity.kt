@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     private var connectedDevice: BluetoothDevice? = null
     private var isConnected = false
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -62,24 +63,25 @@ class MainActivity : Activity() {
         val sendButton = findViewById<Button>(R.id.sendButton)
         sendButton.isEnabled = false
 
-        val connectButton = findViewById<Button>(R.id.connectButton)
-        connectButton.setOnClickListener {
-            // TODO: Replace with your device name or scan logic
-            val deviceName = "YourDeviceName" // <-- Set your BLE device name here
-            appendLog("Scanning for BLE device: $deviceName")
-            bleNusManager.startScan(deviceName) { device ->
-                appendLog("Device found: ${device.name} (${device.address}) Connecting...")
-                bleNusManager.connect(device, onConnected = {
-                    runOnUiThread {
-                        isConnected = true
-                        sendButton.isEnabled = true
-                        appendLog("Connected to BLE device!")
-                    }
-                }, onDataReceived = { bytes ->
-                    val hex = bytes.joinToString(" ") { String.format("%02X", it) }
-                    runOnUiThread { appendLog("Received: $hex") }
-                })
-            }
+        // Auto-connect to paired OOB device
+        val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+        val targetDeviceName = "YourDeviceName" // <-- Set your OOB device name here
+        val bondedDevices = bluetoothAdapter?.bondedDevices
+        val device = bondedDevices?.firstOrNull { it.name == targetDeviceName }
+        if (device != null) {
+            appendLog("Found paired device: ${device.name} (${device.address}), connecting...")
+            bleNusManager.connect(device, onConnected = {
+                runOnUiThread {
+                    isConnected = true
+                    sendButton.isEnabled = true
+                    appendLog("Connected to BLE device!")
+                }
+            }, onDataReceived = { bytes ->
+                val hex = bytes.joinToString(" ") { String.format("%02X", it) }
+                runOnUiThread { appendLog("Received: $hex") }
+            })
+        } else {
+            appendLog("No paired device found with name: $targetDeviceName")
         }
 
         sendButton.setOnClickListener {
