@@ -52,6 +52,7 @@ class MainActivity : Activity() {
         // Log all GATT services and characteristics after connection
         nusBleManager.setOnDataReceivedListener { device, data ->
             val hex = data.value?.joinToString(" ") { String.format("%02X", it) } ?: ""
+            android.util.Log.d("MainActivity", "Received: $hex")
             runOnUiThread { appendLog("Received: $hex") }
         }
 
@@ -59,30 +60,38 @@ class MainActivity : Activity() {
         val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
         val bondedDevices = bluetoothAdapter?.bondedDevices
         val device = bondedDevices?.firstOrNull()
-                if (device != null) {
-                    appendLog("Connecting to: ${device.name} (${device.address})")
-                    nusBleManager.connect(device)
-                        .retry(3, 100)
-                        .useAutoConnect(false)
-                        .done {
-                            runOnUiThread {
-                                appendLog("Connected to BLE device!")
-                                // Log all GATT services after connection
-                                val gatt = nusBleManager.bluetoothGatt
-                                if (gatt != null) {
-                                    nusBleManager.logAllServices(gatt) { msg -> runOnUiThread { appendLog(msg) } }
-                                } else {
-                                    appendLog("BluetoothGatt not available for service logging.")
-                                }
+        if (device != null) {
+            appendLog("Connecting to: ${device.name} (${device.address})")
+            android.util.Log.d("MainActivity", "Connecting to: ${device.name} (${device.address})")
+            nusBleManager.connect(device)
+                .retry(3, 100)
+                .useAutoConnect(false)
+                .done {
+                    runOnUiThread {
+                        appendLog("Connected to BLE device!")
+                        android.util.Log.d("MainActivity", "Connected to BLE device!")
+                        // Log all GATT services after connection
+                        val gatt = nusBleManager.bluetoothGatt
+                        if (gatt != null) {
+                            nusBleManager.logAllServices(gatt) { msg ->
+                                android.util.Log.d("MainActivity", msg)
+                                runOnUiThread { appendLog(msg) }
                             }
+                        } else {
+                            appendLog("BluetoothGatt not available for service logging.")
+                            android.util.Log.e("MainActivity", "BluetoothGatt not available for service logging.")
                         }
-                        .fail { _, status ->
-                            runOnUiThread { appendLog("BLE connection failed: $status") }
-                        }
-                        .enqueue()
-                } else {
-                    appendLog("No bonded device found.")
+                    }
                 }
+                .fail { _, status ->
+                    runOnUiThread { appendLog("BLE connection failed: $status") }
+                    android.util.Log.e("MainActivity", "BLE connection failed: $status")
+                }
+                .enqueue()
+        } else {
+            appendLog("No bonded device found.")
+            android.util.Log.e("MainActivity", "No bonded device found.")
+        }
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
@@ -135,7 +144,10 @@ class MainActivity : Activity() {
             val frame = makeDataFrame(commandNum, 0, dataBytes)
             val hexString = frame.joinToString(" ") { String.format("%02X", it) }
             appendLog("Sending: $hexString")
-            nusBleManager.send(frame) { msg -> runOnUiThread { appendLog(msg) } }
+            nusBleManager.send(frame) { msg ->
+                android.util.Log.d("MainActivity", msg)
+                runOnUiThread { appendLog(msg) }
+            }
             Toast.makeText(this, "Command sent over BLE", Toast.LENGTH_SHORT).show()
         }
     }
