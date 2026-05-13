@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import no.nordicsemi.android.ble.BleManager
+import no.nordicsemi.android.ble.ConnectionPriority
 import no.nordicsemi.android.ble.callback.DataReceivedCallback
 import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
@@ -28,6 +29,13 @@ class NusBleManager(context: Context) : BleManager(context) {
                     Log.d(TAG, "  Characteristic: ${characteristic.uuid}")
                 }
             }
+                        override fun onDeviceReady() {
+                            // Request MTU and Data Length when device is ready
+                            Log.d(TAG, "onDeviceReady: requesting MTU 247 and data length 251")
+                            requestMtu(247).enqueue()
+                            requestConnectionPriority(ConnectionPriority.HIGH).enqueue()
+                            // requestDataLength(251).enqueue() // Not available in all library versions
+                        }
                 override fun onDeviceReady() {
                     // Request MTU and Data Length when device is ready
                     Log.d(TAG, "onDeviceReady: requesting MTU 247 and data length 251")
