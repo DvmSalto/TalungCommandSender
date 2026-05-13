@@ -90,7 +90,7 @@ class MainActivity : Activity() {
                 return@setOnClickListener
             }
             // For now, status is always 0. You can add a status field if needed.
-            val frame = makeChameleonFrame(commandNum, 0, dataBytes)
+            val frame = makeDataFrame(commandNum, 0, dataBytes)
             val hexString = frame.joinToString(" ") { String.format("%02X", it) }
             appendLog("Sending: $hexString")
             bleNusManager.send(frame)
@@ -181,7 +181,7 @@ class MainActivity : Activity() {
     }
 
     private fun sendChameleonCommand(command: Int, payload: ByteArray) {
-        val frameBytes = makeChameleonFrame(command, 0, payload)
+        val frameBytes = makeDataFrame(command, 0, payload)
         val hexString = frameBytes.joinToString(" ") { String.format("%02X", it) }
         appendLog("Sending: $hexString")
         bleNusManager.send(frameBytes)
