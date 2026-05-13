@@ -48,16 +48,17 @@ class MainActivity : Activity() {
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
-                // Log all GATT services and characteristics after connection
-                nusBleManager.setOnDataReceivedListener { device, data ->
-                    val hex = data.value?.joinToString(" ") { String.format("%02X", it) } ?: ""
-                    runOnUiThread { appendLog("Received: $hex") }
-                }
+        nusBleManager = NusBleManager(this)
+        // Log all GATT services and characteristics after connection
+        nusBleManager.setOnDataReceivedListener { device, data ->
+            val hex = data.value?.joinToString(" ") { String.format("%02X", it) } ?: ""
+            runOnUiThread { appendLog("Received: $hex") }
+        }
 
-                // Connect to the first bonded device (if any) and log services
-                val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-                val bondedDevices = bluetoothAdapter?.bondedDevices
-                val device = bondedDevices?.firstOrNull()
+        // Connect to the first bonded device (if any) and log services
+        val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+        val bondedDevices = bluetoothAdapter?.bondedDevices
+        val device = bondedDevices?.firstOrNull()
                 if (device != null) {
                     appendLog("Connecting to: ${device.name} (${device.address})")
                     nusBleManager.connect(device)
