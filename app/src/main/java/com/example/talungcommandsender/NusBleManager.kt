@@ -19,39 +19,17 @@ class NusBleManager(context: Context) : BleManager(context) {
         get() = lastBluetoothGatt
 
     fun logAllServices(gatt: BluetoothGatt, log: (String) -> Unit) {
-            log("Discovered GATT Services:")
-            Log.d(TAG, "Discovered GATT Services:")
-            for (service in gatt.services) {
-                log("Service: ${service.uuid}")
-                Log.d(TAG, "Service: ${service.uuid}")
-                for (characteristic in service.characteristics) {
-                    log("  Characteristic: ${characteristic.uuid}")
-                    Log.d(TAG, "  Characteristic: ${characteristic.uuid}")
-                }
+        log("Discovered GATT Services:")
+        Log.d(TAG, "Discovered GATT Services:")
+        for (service in gatt.services) {
+            log("Service: ${service.uuid}")
+            Log.d(TAG, "Service: ${service.uuid}")
+            for (characteristic in service.characteristics) {
+                log("  Characteristic: ${characteristic.uuid}")
+                Log.d(TAG, "  Characteristic: ${characteristic.uuid}")
             }
-                        override fun onDeviceReady() {
-                            // Request MTU and Data Length when device is ready
-                            Log.d(TAG, "onDeviceReady: requesting MTU 247 and data length 251")
-                            requestMtu(247).enqueue()
-                            requestConnectionPriority(ConnectionPriority.HIGH).enqueue()
-                            // requestDataLength(251).enqueue() // Not available in all library versions
-                        }
-                override fun onDeviceReady() {
-                    // Request MTU and Data Length when device is ready
-                    Log.d(TAG, "onDeviceReady: requesting MTU 247 and data length 251")
-                    requestMtu(247).enqueue()
-                    requestConnectionPriority(CONNECTION_PRIORITY_HIGH).enqueue()
-                    // If requestDataLength is not available in your library version, comment out the next line
-                    // requestDataLength(251).enqueue()
-                }
         }
-            override fun onDeviceReady() {
-                // Request MTU and Data Length when device is ready
-                Log.d(TAG, "onDeviceReady: requesting MTU 247 and data length 251")
-                requestMtu(247).enqueue()
-                requestConnectionPriority(CONNECTION_PRIORITY_HIGH).enqueue()
-                requestDataLength(251).enqueue()
-            }
+    }
     companion object {
         val NUS_SERVICE_UUID: UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
         val NUS_RX_UUID: UUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
@@ -69,6 +47,12 @@ class NusBleManager(context: Context) : BleManager(context) {
     override fun getGattCallback(): BleManagerGattCallback = NusBleManagerGattCallback()
 
     private inner class NusBleManagerGattCallback : BleManagerGattCallback() {
+                override fun onDeviceReady() {
+                    // Request MTU when device is ready
+                    Log.d(TAG, "onDeviceReady: requesting MTU 247")
+                    requestMtu(247).enqueue()
+                    requestConnectionPriority(ConnectionPriority.HIGH).enqueue()
+                }
         override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
             Log.d(TAG, "isRequiredServiceSupported: called")
             logAllServices(gatt) { Log.d(TAG, it) }
