@@ -89,7 +89,13 @@ class MainActivity : Activity() {
                 appendLog("Invalid data bytes: $dataStr")
                 return@setOnClickListener
             }
-            sendChameleonCommand(commandNum, dataBytes)
+            // For now, status is always 0. You can add a status field if needed.
+            val frame = makeChameleonFrame(commandNum, 0, dataBytes)
+            val hexString = frame.joinToString(" ") { String.format("%02X", it) }
+            appendLog("Sending: $hexString")
+            bleNusManager.send(frame)
+            Toast.makeText(this, "Command sent over BLE", Toast.LENGTH_SHORT).show()
+            // The BLE manager's onDataReceived callback will log the response
         }
     }
 
