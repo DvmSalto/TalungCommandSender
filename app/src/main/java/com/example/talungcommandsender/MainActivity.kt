@@ -22,7 +22,7 @@ import com.example.talungcommandsender.BleNusManager
 import com.example.talungcommandsender.DataFrame
 
 class MainActivity : Activity() {
-        private val PERMISSION_REQUEST_CODE = 1001
+    private val PERMISSION_REQUEST_CODE = 1001
     private var nfcAdapter: NfcAdapter? = null
     private lateinit var bleNusManager: BleNusManager
     private var connectedDevice: BluetoothDevice? = null
@@ -77,6 +77,8 @@ class MainActivity : Activity() {
                 Toast.makeText(this, "Select a command first", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
     private fun hasPermissions(): Boolean {
         val permissions = mutableListOf(
             Manifest.permission.BLUETOOTH,
@@ -118,8 +120,6 @@ class MainActivity : Activity() {
                 Toast.makeText(this, "Permissions denied", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
     }
 
     private fun sendSelectedCommand(command: String) {
